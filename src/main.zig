@@ -5,6 +5,6 @@ pub fn main() anyerror!void {
     var buf: [1]u8 = undefined;
     while (true) {
         const n = try stdin.read(buf[0..]);
-        if (n != 1) break;
+        if (n != 1 or buf[0] == 'q') break;
     }
 }
