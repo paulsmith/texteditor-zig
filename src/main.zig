@@ -12,9 +12,9 @@ pub fn main() anyerror!void {
         if (n != 1 or buf[0] == 'q') break;
         const ch = buf[0];
         if (ascii.isCntrl(ch)) {
-            try stdout.print("{d}\n", .{ch});
+            try stdout.print("{d}\r\n", .{ch});
         } else {
-            try stdout.print("{d} ('{c}')\n", .{ ch, ch });
+            try stdout.print("{d} ('{c}')\r\n", .{ ch, ch });
         }
     }
 }
