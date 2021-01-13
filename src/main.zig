@@ -8,14 +8,15 @@ pub fn main() anyerror!void {
     const stdout = io.getStdOut().writer();
     var buf: [1]u8 = undefined;
     while (true) {
+        buf[0] = 0;
         const n = try stdin.read(buf[0..]);
-        if (n != 1 or buf[0] == 'q') break;
         const ch = buf[0];
         if (ascii.isCntrl(ch)) {
             try stdout.print("{d}\r\n", .{ch});
         } else {
             try stdout.print("{d} ('{c}')\r\n", .{ ch, ch });
         }
+        if (ch == 'q') break;
     }
 }
 
@@ -30,6 +31,8 @@ fn enableRawMode() !void {
     raw.oflag &= ~@as(tcflag_t, OPOST);
     raw.cflag |= CS8;
     raw.lflag &= ~@as(tcflag_t, ECHO | ICANON | IEXTEN | ISIG);
+    raw.cc[VMIN] = 0;
+    raw.cc[VTIME] = 1;
     try tcsetattr(stdin_fd, TCSA.FLUSH, raw);
 }
 
