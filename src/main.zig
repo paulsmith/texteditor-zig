@@ -26,8 +26,9 @@ fn enableRawMode() !void {
     orig_termios = try os.tcgetattr(stdin_fd);
     try atexit(disableRawMode);
     var raw = orig_termios;
-    raw.iflag &= ~@as(os.tcflag_t, os.IXON | os.ICRNL);
+    raw.iflag &= ~@as(os.tcflag_t, os.BRKINT | os.ICRNL | os.INPCK | os.ISTRIP | os.IXON);
     raw.oflag &= ~@as(os.tcflag_t, os.OPOST);
+    raw.cflag |= os.CS8;
     raw.lflag &= ~@as(os.tcflag_t, os.ECHO | os.ICANON | os.IEXTEN | os.ISIG);
     try os.tcsetattr(stdin_fd, os.TCSA.FLUSH, raw);
 }
