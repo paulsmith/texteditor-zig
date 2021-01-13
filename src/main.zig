@@ -1,13 +1,21 @@
+const ascii = @import("std").ascii;
 const io = @import("std").io;
 const os = @import("std").os;
 
 pub fn main() anyerror!void {
     try enableRawMode();
     const stdin = io.getStdIn().reader();
+    const stdout = io.getStdOut().writer();
     var buf: [1]u8 = undefined;
     while (true) {
         const n = try stdin.read(buf[0..]);
         if (n != 1 or buf[0] == 'q') break;
+        const ch = buf[0];
+        if (ascii.isCntrl(ch)) {
+            try stdout.print("{d}\n", .{ch});
+        } else {
+            try stdout.print("{d} ('{c}')\n", .{ ch, ch });
+        }
     }
 }
 
