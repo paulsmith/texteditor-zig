@@ -1,6 +1,6 @@
+const std = @import("std");
 const ascii = @import("std").ascii;
 const io = @import("std").io;
-const panic = @import("std").debug.panic;
 usingnamespace @import("std").os;
 
 pub fn main() anyerror!void {
@@ -9,10 +9,20 @@ pub fn main() anyerror!void {
     while (true) {
         try editorRefreshScreen();
         switch (try editorProcessKeyPress()) {
-            .Quit => break,
+            .Quit => {
+                try stdout.writeAll("\x1b[2J");
+                try stdout.writeAll("\x1b[H");
+                break;
+            },
             else => {},
         }
     }
+}
+
+pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) noreturn {
+    stdout.writeAll("\x1b[2J") catch {};
+    stdout.writeAll("\x1b[H") catch {};
+    std.builtin.default_panic(msg, error_return_trace);
 }
 
 const KeyAction = enum { Quit, NoOp };
@@ -59,5 +69,5 @@ fn enableRawMode() !void {
 }
 
 export fn disableRawMode() void {
-    tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch panic("tcsetattr", .{});
+    tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch panic("tcsetattr", null);
 }
