@@ -6,6 +6,7 @@ usingnamespace @import("std").os;
 pub fn main() anyerror!void {
     try enableRawMode();
     while (true) {
+        try editorRefreshScreen();
         try editorProcessKeyPress();
     }
 }
@@ -19,6 +20,7 @@ fn editorProcessKeyPress() !void {
 }
 
 const stdin = io.getStdIn().reader();
+const stdout = io.getStdOut().writer();
 
 fn editorReadKey() !u8 {
     var buf: [1]u8 = undefined;
@@ -28,6 +30,10 @@ fn editorReadKey() !u8 {
 
 inline fn ctrlKey(comptime ch: u8) u8 {
     return ch & 0x1f;
+}
+
+fn editorRefreshScreen() !void {
+    try stdout.writeAll("\x1b[2J");
 }
 
 var orig_termios: termios = undefined;
