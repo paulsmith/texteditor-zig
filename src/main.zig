@@ -25,6 +25,14 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
     std.builtin.default_panic(msg, error_return_trace);
 }
 
+const Editor = struct {
+    orig_termios: termios,
+};
+
+var editor = Editor{
+    .orig_termios = undefined,
+};
+
 const KeyAction = enum { Quit, NoOp };
 
 fn editorProcessKeyPress() !KeyAction {
@@ -62,12 +70,11 @@ fn editorRefreshScreen() !void {
     try stdout.writeAll("\x1b[H");
 }
 
-var orig_termios: termios = undefined;
 const stdin_fd = io.getStdIn().handle;
 
 fn enableRawMode() !void {
-    orig_termios = try tcgetattr(stdin_fd);
-    var raw = orig_termios;
+    editor.orig_termios = try tcgetattr(stdin_fd);
+    var raw = editor.orig_termios;
     raw.iflag &= ~@as(tcflag_t, BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.oflag &= ~@as(tcflag_t, OPOST);
     raw.cflag |= CS8;
@@ -78,5 +85,5 @@ fn enableRawMode() !void {
 }
 
 export fn disableRawMode() void {
-    tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch panic("tcsetattr", null);
+    tcsetattr(stdin_fd, TCSA.FLUSH, editor.orig_termios) catch panic("tcsetattr", null);
 }
