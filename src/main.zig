@@ -5,23 +5,28 @@ usingnamespace @import("std").os;
 
 pub fn main() anyerror!void {
     try enableRawMode();
-    const stdin = io.getStdIn().reader();
-    const stdout = io.getStdOut().writer();
-    var buf: [1]u8 = undefined;
     while (true) {
-        buf[0] = 0;
-        const n = try stdin.read(buf[0..]);
-        const ch = buf[0];
-        if (ascii.isCntrl(ch)) {
-            try stdout.print("{d}\r\n", .{ch});
-        } else {
-            try stdout.print("{d} ('{c}')\r\n", .{ ch, ch });
-        }
-        if (ch == ctrlKey('q')) break;
+        try editorProcessKeyPress();
     }
 }
 
-fn ctrlKey(comptime ch: u8) u8 {
+fn editorProcessKeyPress() !void {
+    const c = try editorReadKey();
+    switch (c) {
+        ctrlKey('q') => exit(0),
+        else => {},
+    }
+}
+
+const stdin = io.getStdIn().reader();
+
+fn editorReadKey() !u8 {
+    var buf: [1]u8 = undefined;
+    const n = try stdin.read(buf[0..]);
+    return buf[0];
+}
+
+inline fn ctrlKey(comptime ch: u8) u8 {
     return ch & 0x1f;
 }
 
