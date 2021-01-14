@@ -17,8 +17,12 @@ pub fn main() anyerror!void {
         } else {
             try stdout.print("{d} ('{c}')\r\n", .{ ch, ch });
         }
-        if (ch == 'q') break;
+        if (ch == ctrlKey('q')) break;
     }
+}
+
+fn ctrlKey(comptime ch: u8) u8 {
+    return ch & 0x1f;
 }
 
 var orig_termios: termios = undefined;
