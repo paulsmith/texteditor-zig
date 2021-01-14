@@ -1,5 +1,6 @@
 const ascii = @import("std").ascii;
 const io = @import("std").io;
+const panic = @import("std").debug.panic;
 usingnamespace @import("std").os;
 
 pub fn main() anyerror!void {
@@ -37,7 +38,7 @@ fn enableRawMode() !void {
 }
 
 export fn disableRawMode() void {
-    tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch unreachable;
+    tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch panic("tcsetattr", .{});
 }
 
 // TODO(paulsmith): delete all the following when added to zig's lib/std/zig
