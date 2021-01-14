@@ -1,14 +1,20 @@
 const std = @import("std");
 const ascii = @import("std").ascii;
 const io = @import("std").io;
+const heap = @import("std").heap;
+const mem = @import("std").mem;
 usingnamespace @import("std").os;
 
 pub fn main() anyerror!void {
     try enableRawMode();
     defer disableRawMode();
     try initEditor();
+    defer {
+        const leaked = gpa.deinit();
+        if (leaked) panic("leaked memory", null);
+    }
     while (true) {
-        try editorRefreshScreen();
+        try editorRefreshScreen(&gpa.allocator);
         switch (try editorProcessKeyPress()) {
             .Quit => {
                 try stdout.writeAll("\x1b[2J");
@@ -25,6 +31,8 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
     stdout.writeAll("\x1b[H") catch {};
     std.builtin.default_panic(msg, error_return_trace);
 }
+
+var gpa = heap.GeneralPurposeAllocator(.{}){};
 
 const Editor = struct {
     orig_termios: termios,
@@ -67,11 +75,11 @@ fn editorReadKey() !u8 {
     return buf[0];
 }
 
-fn editorDrawRows() !void {
+fn editorDrawRows(writer: anytype) !void {
     var y: usize = 0;
     while (y < editor.rows) : (y += 1) {
-        try stdout.writeAll("~");
-        if (y < editor.rows - 1) try stdout.writeAll("\r\n");
+        try writer.writeAll("~");
+        if (y < editor.rows - 1) try writer.writeAll("\r\n");
     }
 }
 
@@ -91,11 +99,15 @@ fn getWindowSize() !WindowSize {
     }
 }
 
-fn editorRefreshScreen() !void {
-    try stdout.writeAll("\x1b[2J");
-    try stdout.writeAll("\x1b[H");
-    try editorDrawRows();
-    try stdout.writeAll("\x1b[H");
+fn editorRefreshScreen(allocator: *mem.Allocator) !void {
+    var buf = std.ArrayList(u8).init(allocator);
+    defer buf.deinit();
+    var writer = buf.writer();
+    try writer.writeAll("\x1b[2J");
+    try writer.writeAll("\x1b[H");
+    try editorDrawRows(writer);
+    try writer.writeAll("\x1b[H");
+    try stdout.writeAll(buf.items);
 }
 
 const stdin_fd = io.getStdIn().handle;
