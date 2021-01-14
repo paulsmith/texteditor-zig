@@ -5,18 +5,24 @@ usingnamespace @import("std").os;
 
 pub fn main() anyerror!void {
     try enableRawMode();
+    defer disableRawMode();
     while (true) {
         try editorRefreshScreen();
-        try editorProcessKeyPress();
+        switch (try editorProcessKeyPress()) {
+            .Quit => break,
+            else => {},
+        }
     }
 }
 
-fn editorProcessKeyPress() !void {
+const KeyAction = enum { Quit, NoOp };
+
+fn editorProcessKeyPress() !KeyAction {
     const c = try editorReadKey();
-    switch (c) {
-        ctrlKey('q') => exit(0),
-        else => {},
-    }
+    return switch (c) {
+        ctrlKey('q') => .Quit,
+        else => .NoOp,
+    };
 }
 
 const stdin = io.getStdIn().reader();
@@ -41,7 +47,6 @@ const stdin_fd = io.getStdIn().handle;
 
 fn enableRawMode() !void {
     orig_termios = try tcgetattr(stdin_fd);
-    try atexit(disableRawMode);
     var raw = orig_termios;
     raw.iflag &= ~@as(tcflag_t, BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     raw.oflag &= ~@as(tcflag_t, OPOST);
@@ -54,25 +59,4 @@ fn enableRawMode() !void {
 
 export fn disableRawMode() void {
     tcsetattr(stdin_fd, TCSA.FLUSH, orig_termios) catch panic("tcsetattr", .{});
-}
-
-// TODO(paulsmith): delete all the following when added to zig's lib/std/zig
-
-const AtExitError = error{NoMemoryAvailable} || UnexpectedError;
-
-// TODO(paulsmith): delete this when added to zig's lib/std/c.zig
-const _c = struct {
-    pub extern fn atexit(function: ?fn () callconv(.C) void) c_int;
-};
-
-fn atexit(comptime function_ptr: anytype) AtExitError!void {
-    const ti = @typeInfo(@TypeOf(function_ptr));
-    if (ti.Fn.return_type.? != void or ti.Fn.args.len != 0 or ti.Fn.calling_convention != .C) {
-        @compileError("atexit registered function must have return type void, take no args, and use C calling convention");
-    }
-    switch (errno(_c.atexit(function_ptr))) {
-        0 => return,
-        ENOMEM => return AtExitError.NoMemoryAvailable,
-        else => |err| return unexpectedErrno(err),
-    }
 }
