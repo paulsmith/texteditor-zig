@@ -44,12 +44,21 @@ fn editorReadKey() !u8 {
     return buf[0];
 }
 
+fn editorDrawRows() !void {
+    var y: usize = 0;
+    while (y < 24) : (y += 1) {
+        try stdout.writeAll("~\r\n");
+    }
+}
+
 inline fn ctrlKey(comptime ch: u8) u8 {
     return ch & 0x1f;
 }
 
 fn editorRefreshScreen() !void {
     try stdout.writeAll("\x1b[2J");
+    try stdout.writeAll("\x1b[H");
+    try editorDrawRows();
     try stdout.writeAll("\x1b[H");
 }
 
