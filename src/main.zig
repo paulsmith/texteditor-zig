@@ -70,7 +70,8 @@ fn editorReadKey() !u8 {
 fn editorDrawRows() !void {
     var y: usize = 0;
     while (y < editor.rows) : (y += 1) {
-        try stdout.writeAll("~\r\n");
+        try stdout.writeAll("~");
+        if (y < editor.rows - 1) try stdout.writeAll("\r\n");
     }
 }
 
