@@ -40,6 +40,7 @@ inline fn ctrlKey(comptime ch: u8) u8 {
 
 fn editorRefreshScreen() !void {
     try stdout.writeAll("\x1b[2J");
+    try stdout.writeAll("\x1b[H");
 }
 
 var orig_termios: termios = undefined;
