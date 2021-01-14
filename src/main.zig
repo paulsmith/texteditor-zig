@@ -6,6 +6,7 @@ usingnamespace @import("std").os;
 pub fn main() anyerror!void {
     try enableRawMode();
     defer disableRawMode();
+    try initEditor();
     while (true) {
         try editorRefreshScreen();
         switch (try editorProcessKeyPress()) {
@@ -27,11 +28,21 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
 
 const Editor = struct {
     orig_termios: termios,
+    rows: u16,
+    cols: u16,
 };
 
 var editor = Editor{
     .orig_termios = undefined,
+    .rows = undefined,
+    .cols = undefined,
 };
+
+fn initEditor() !void {
+    const ws = try getWindowSize();
+    editor.rows = ws.rows;
+    editor.cols = ws.cols;
+}
 
 const KeyAction = enum { Quit, NoOp };
 
@@ -41,6 +52,10 @@ fn editorProcessKeyPress() !KeyAction {
         ctrlKey('q') => .Quit,
         else => .NoOp,
     };
+}
+
+inline fn ctrlKey(comptime ch: u8) u8 {
+    return ch & 0x1f;
 }
 
 const stdin = io.getStdIn().reader();
@@ -54,13 +69,25 @@ fn editorReadKey() !u8 {
 
 fn editorDrawRows() !void {
     var y: usize = 0;
-    while (y < 24) : (y += 1) {
+    while (y < editor.rows) : (y += 1) {
         try stdout.writeAll("~\r\n");
     }
 }
 
-inline fn ctrlKey(comptime ch: u8) u8 {
-    return ch & 0x1f;
+const WindowSize = struct {
+    rows: u16,
+    cols: u16,
+};
+
+fn getWindowSize() !WindowSize {
+    var ws: winsize = undefined;
+    switch (errno(system.ioctl(stdin_fd, TIOCGWINSZ, &ws))) {
+        0 => return WindowSize{ .rows = ws.ws_row, .cols = ws.ws_col },
+        EBADF => return error.BadFileDescriptor,
+        EINVAL => return error.InvalidRequest,
+        ENOTTY => return error.NotATerminal,
+        else => |err| return unexpectedErrno(err),
+    }
 }
 
 fn editorRefreshScreen() !void {
