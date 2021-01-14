@@ -1,5 +1,6 @@
 const std = @import("std");
 const ascii = @import("std").ascii;
+const fmt = @import("std").fmt;
 const io = @import("std").io;
 const heap = @import("std").heap;
 const mem = @import("std").mem;
@@ -8,13 +9,13 @@ usingnamespace @import("std").os;
 const kilo_version = "0.0.1";
 
 pub fn main() anyerror!void {
-    try enableRawMode();
-    defer disableRawMode();
-    try initEditor();
     defer {
         const leaked = gpa.deinit();
         if (leaked) panic("leaked memory", null);
     }
+    try enableRawMode();
+    defer disableRawMode();
+    try initEditor();
     while (true) {
         try editorRefreshScreen(&gpa.allocator);
         switch (try editorProcessKeyPress()) {
@@ -93,11 +94,20 @@ fn getWindowSize() !WindowSize {
     }
 }
 
-fn editorDrawRows(writer: anytype) !void {
+fn editorDrawRows(writer: anytype, allocator: *mem.Allocator) !void {
     var y: usize = 0;
     while (y < editor.rows) : (y += 1) {
         if (y == editor.rows / 3) {
-            try writer.print("Kilo editor -- version {s}", .{kilo_version});
+            var welcome = try fmt.allocPrint(allocator, "Kilo editor -- version {s}", .{kilo_version});
+            defer allocator.free(welcome);
+            if (welcome.len > editor.cols) welcome = welcome[0..editor.cols];
+            var padding = (editor.cols - welcome.len) / 2;
+            if (padding > 0) {
+                try writer.writeAll("~");
+                padding -= 1;
+            }
+            while (padding > 0) : (padding -= 1) try writer.writeAll(" ");
+            try writer.writeAll(welcome);
         } else {
             try writer.writeAll("~");
         }
@@ -112,7 +122,7 @@ fn editorRefreshScreen(allocator: *mem.Allocator) !void {
     var writer = buf.writer();
     try writer.writeAll("\x1b[?25l");
     try writer.writeAll("\x1b[H");
-    try editorDrawRows(writer);
+    try editorDrawRows(writer, allocator);
     try writer.writeAll("\x1b[H");
     try writer.writeAll("\x1b[?25h");
     try stdout.writeAll(buf.items);
