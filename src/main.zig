@@ -5,6 +5,8 @@ const heap = @import("std").heap;
 const mem = @import("std").mem;
 usingnamespace @import("std").os;
 
+const kilo_version = "0.0.1";
+
 pub fn main() anyerror!void {
     try enableRawMode();
     defer disableRawMode();
@@ -94,7 +96,11 @@ fn getWindowSize() !WindowSize {
 fn editorDrawRows(writer: anytype) !void {
     var y: usize = 0;
     while (y < editor.rows) : (y += 1) {
-        try writer.writeAll("~");
+        if (y == editor.rows / 3) {
+            try writer.print("Kilo editor -- version {s}", .{kilo_version});
+        } else {
+            try writer.writeAll("~");
+        }
         try writer.writeAll("\x1b[K");
         if (y < editor.rows - 1) try writer.writeAll("\r\n");
     }
