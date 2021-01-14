@@ -75,14 +75,6 @@ fn editorReadKey() !u8 {
     return buf[0];
 }
 
-fn editorDrawRows(writer: anytype) !void {
-    var y: usize = 0;
-    while (y < editor.rows) : (y += 1) {
-        try writer.writeAll("~");
-        if (y < editor.rows - 1) try writer.writeAll("\r\n");
-    }
-}
-
 const WindowSize = struct {
     rows: u16,
     cols: u16,
@@ -99,14 +91,24 @@ fn getWindowSize() !WindowSize {
     }
 }
 
+fn editorDrawRows(writer: anytype) !void {
+    var y: usize = 0;
+    while (y < editor.rows) : (y += 1) {
+        try writer.writeAll("~");
+        try writer.writeAll("\x1b[K");
+        if (y < editor.rows - 1) try writer.writeAll("\r\n");
+    }
+}
+
 fn editorRefreshScreen(allocator: *mem.Allocator) !void {
     var buf = std.ArrayList(u8).init(allocator);
     defer buf.deinit();
     var writer = buf.writer();
-    try writer.writeAll("\x1b[2J");
+    try writer.writeAll("\x1b[?25l");
     try writer.writeAll("\x1b[H");
     try editorDrawRows(writer);
     try writer.writeAll("\x1b[H");
+    try writer.writeAll("\x1b[?25h");
     try stdout.writeAll(buf.items);
 }
 
