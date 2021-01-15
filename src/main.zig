@@ -18,15 +18,11 @@ pub fn main() anyerror!void {
     try initEditor();
     while (true) {
         try editorRefreshScreen(&gpa.allocator);
-        switch (try editorProcessKeyPress()) {
-            .Quit => {
-                try stdout.writeAll("\x1b[2J");
-                try stdout.writeAll("\x1b[H");
-                break;
-            },
-            else => {},
-        }
+        try editorProcessKeyPress();
+        if (editor.shutting_down) break;
     }
+    try stdout.writeAll("\x1b[2J");
+    try stdout.writeAll("\x1b[H");
 }
 
 pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) noreturn {
@@ -43,18 +39,17 @@ const Editor = struct {
     cols: u16,
     cx: i16,
     cy: i16,
+    shutting_down: bool,
 
     const Self = *@This();
 
-    fn moveCursor(self: Self, key: u8) KeyAction {
-        switch (key) {
-            'a' => self.cx -= 1,
-            'd' => self.cx += 1,
-            'w' => self.cy -= 1,
-            's' => self.cy += 1,
-            else => {},
+    fn moveCursor(self: Self, arrow_key: ArrowKey) void {
+        switch (arrow_key) {
+            .left => self.cx -= 1,
+            .right => self.cx += 1,
+            .up => self.cy -= 1,
+            .down => self.cy += 1,
         }
-        return .NoOp;
     }
 };
 
@@ -64,6 +59,7 @@ var editor = Editor{
     .cols = undefined,
     .cx = 0,
     .cy = 0,
+    .shutting_down = false,
 };
 
 fn initEditor() !void {
@@ -72,15 +68,15 @@ fn initEditor() !void {
     editor.cols = ws.cols;
 }
 
-const KeyAction = enum { Quit, NoOp };
-
-fn editorProcessKeyPress() !KeyAction {
-    const c = try editorReadKey();
-    return switch (c) {
-        ctrlKey('q') => .Quit,
-        'w', 'a', 's', 'd' => (&editor).moveCursor(c),
-        else => .NoOp,
-    };
+fn editorProcessKeyPress() !void {
+    const key = try editorReadKey();
+    switch (key) {
+        .char => |ch| switch (ch) {
+            ctrlKey('q') => (&editor).shutting_down = true,
+            else => {},
+        },
+        .arrow_key => |dir| (&editor).moveCursor(dir),
+    }
 }
 
 inline fn ctrlKey(comptime ch: u8) u8 {
@@ -96,22 +92,34 @@ fn readByte() !u8 {
     return buf[0];
 }
 
-fn editorReadKey() !u8 {
+const ArrowKey = enum {
+    left,
+    right,
+    up,
+    down,
+};
+
+const Key = union(enum) {
+    char: u8,
+    arrow_key: ArrowKey,
+};
+
+fn editorReadKey() !Key {
     const c = try readByte();
     if (c == '\x1b') {
-        const c1 = readByte() catch return '\x1b';
+        const c1 = readByte() catch return Key{ .char = '\x1b' };
         if (c1 == '[') {
-            const c2 = readByte() catch return '\x1b';
+            const c2 = readByte() catch return Key{ .char = '\x1b' };
             switch (c2) {
-                'A' => return 'w',
-                'B' => return 's',
-                'C' => return 'd',
-                'D' => return 'a',
+                'A' => return Key{ .arrow_key = .up },
+                'B' => return Key{ .arrow_key = .down },
+                'C' => return Key{ .arrow_key = .right },
+                'D' => return Key{ .arrow_key = .left },
                 else => {},
             }
         }
     }
-    return c;
+    return Key{ .char = c };
 }
 
 const WindowSize = struct {
