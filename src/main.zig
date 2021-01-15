@@ -76,20 +76,22 @@ const Editor = struct {
         tcsetattr(stdin_fd, TCSA.FLUSH, self.orig_termios) catch panic("tcsetattr", null);
     }
 
-    fn moveCursor(self: *Self, arrow_key: ArrowKey) void {
-        switch (arrow_key) {
-            .left => {
+    fn moveCursor(self: *Self, movement: Movement) void {
+        switch (movement) {
+            .arrow_left => {
                 if (self.cx > 0) self.cx -= 1;
             },
-            .right => {
+            .arrow_right => {
                 if (self.cx < self.cols - 1) self.cx += 1;
             },
-            .up => {
+            .arrow_up => {
                 if (self.cy > 0) self.cy -= 1;
             },
-            .down => {
+            .arrow_down => {
                 if (self.cy < self.rows - 1) self.cy += 1;
             },
+            .page_up => {},
+            .page_down => {},
         }
     }
 
@@ -100,7 +102,7 @@ const Editor = struct {
                 ctrlKey('q') => self.shutting_down = true,
                 else => {},
             },
-            .arrow_key => |dir| self.moveCursor(dir),
+            .movement => |m| self.moveCursor(m),
         }
     }
 
@@ -111,10 +113,18 @@ const Editor = struct {
             if (c1 == '[') {
                 const c2 = readByte() catch return Key{ .char = '\x1b' };
                 switch (c2) {
-                    'A' => return Key{ .arrow_key = .up },
-                    'B' => return Key{ .arrow_key = .down },
-                    'C' => return Key{ .arrow_key = .right },
-                    'D' => return Key{ .arrow_key = .left },
+                    'A' => return Key{ .movement = .arrow_up },
+                    'B' => return Key{ .movement = .arrow_down },
+                    'C' => return Key{ .movement = .arrow_right },
+                    'D' => return Key{ .movement = .arrow_left },
+                    '5' => {
+                        const c3 = readByte() catch return Key{ .char = '\x1b' };
+                        if (c3 == '~') return Key{ .movement = .page_up };
+                    },
+                    '6' => {
+                        const c3 = readByte() catch return Key{ .char = '\x1b' };
+                        if (c3 == '~') return Key{ .movement = .page_down };
+                    },
                     else => {},
                 }
             }
@@ -170,16 +180,18 @@ fn readByte() !u8 {
     return buf[0];
 }
 
-const ArrowKey = enum {
-    left,
-    right,
-    up,
-    down,
+const Movement = enum {
+    arrow_left,
+    arrow_right,
+    arrow_up,
+    arrow_down,
+    page_up,
+    page_down,
 };
 
 const Key = union(enum) {
     char: u8,
-    arrow_key: ArrowKey,
+    movement: Movement,
 };
 
 const WindowSize = struct {
