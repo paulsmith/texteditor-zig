@@ -90,13 +90,9 @@ const Editor = struct {
             .arrow_down => {
                 if (self.cy < self.rows - 1) self.cy += 1;
             },
-            .page_up => {
+            .page_up, .page_down => {
                 var n = self.rows;
-                while (n > 0) : (n -= 1) self.moveCursor(.arrow_up);
-            },
-            .page_down => {
-                var n = self.rows;
-                while (n > 0) : (n -= 1) self.moveCursor(.arrow_down);
+                while (n > 0) : (n -= 1) self.moveCursor(if (movement == .page_up) .arrow_up else .arrow_down);
             },
         }
     }
