@@ -41,8 +41,21 @@ const Editor = struct {
     orig_termios: termios,
     rows: u16,
     cols: u16,
-    cx: u16,
-    cy: u16,
+    cx: i16,
+    cy: i16,
+
+    const Self = *@This();
+
+    fn moveCursor(self: Self, key: u8) KeyAction {
+        switch (key) {
+            'a' => self.cx -= 1,
+            'd' => self.cx += 1,
+            'w' => self.cy -= 1,
+            's' => self.cy += 1,
+            else => {},
+        }
+        return .NoOp;
+    }
 };
 
 var editor = Editor{
@@ -65,6 +78,7 @@ fn editorProcessKeyPress() !KeyAction {
     const c = try editorReadKey();
     return switch (c) {
         ctrlKey('q') => .Quit,
+        'w', 'a', 's', 'd' => (&editor).moveCursor(c),
         else => .NoOp,
     };
 }
@@ -128,7 +142,6 @@ fn editorRefreshScreen(allocator: *mem.Allocator) !void {
     try writer.writeAll("\x1b[H");
     try editorDrawRows(writer, allocator);
     try writer.print("\x1b[{d};{d}H", .{ editor.cy + 1, editor.cx + 1 });
-    try writer.writeAll("\x1b[H");
     try writer.writeAll("\x1b[?25h");
     try stdout.writeAll(buf.items);
 }
