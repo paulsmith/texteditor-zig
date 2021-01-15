@@ -45,10 +45,18 @@ const Editor = struct {
 
     fn moveCursor(self: Self, arrow_key: ArrowKey) void {
         switch (arrow_key) {
-            .left => self.cx -= 1,
-            .right => self.cx += 1,
-            .up => self.cy -= 1,
-            .down => self.cy += 1,
+            .left => {
+                if (self.cx > 0) self.cx -= 1;
+            },
+            .right => {
+                if (self.cx < self.cols - 1) self.cx += 1;
+            },
+            .up => {
+                if (self.cy > 0) self.cy -= 1;
+            },
+            .down => {
+                if (self.cy < self.rows - 1) self.cy += 1;
+            },
         }
     }
 };
