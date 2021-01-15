@@ -127,6 +127,7 @@ fn editorRefreshScreen(allocator: *mem.Allocator) !void {
     try writer.writeAll("\x1b[?25l");
     try writer.writeAll("\x1b[H");
     try editorDrawRows(writer, allocator);
+    try writer.print("\x1b[{d};{d}H", .{ editor.cy + 1, editor.cx + 1 });
     try writer.writeAll("\x1b[H");
     try writer.writeAll("\x1b[?25h");
     try stdout.writeAll(buf.items);
