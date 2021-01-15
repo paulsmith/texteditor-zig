@@ -90,10 +90,28 @@ inline fn ctrlKey(comptime ch: u8) u8 {
 const stdin = io.getStdIn().reader();
 const stdout = io.getStdOut().writer();
 
-fn editorReadKey() !u8 {
+fn readByte() !u8 {
     var buf: [1]u8 = undefined;
     const n = try stdin.read(buf[0..]);
     return buf[0];
+}
+
+fn editorReadKey() !u8 {
+    const c = try readByte();
+    if (c == '\x1b') {
+        const c1 = readByte() catch return '\x1b';
+        if (c1 == '[') {
+            const c2 = readByte() catch return '\x1b';
+            switch (c2) {
+                'A' => return 'w',
+                'B' => return 's',
+                'C' => return 'd',
+                'D' => return 'a',
+                else => {},
+            }
+        }
+    }
+    return c;
 }
 
 const WindowSize = struct {
