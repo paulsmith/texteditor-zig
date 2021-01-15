@@ -41,12 +41,16 @@ const Editor = struct {
     orig_termios: termios,
     rows: u16,
     cols: u16,
+    cx: u16,
+    cy: u16,
 };
 
 var editor = Editor{
     .orig_termios = undefined,
     .rows = undefined,
     .cols = undefined,
+    .cx = 0,
+    .cy = 0,
 };
 
 fn initEditor() !void {
