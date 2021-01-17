@@ -15,7 +15,9 @@ pub fn main() anyerror!void {
     }
     var editor = try Editor.new(&gpa.allocator);
     defer gpa.allocator.destroy(editor);
-    try editor.open();
+    const args = try std.process.argsAlloc(&gpa.allocator);
+    defer std.process.argsFree(&gpa.allocator, args);
+    if (args.len == 2) try editor.open(args[1]);
     try editor.enableRawMode();
     defer editor.disableRawMode();
     while (true) {
@@ -66,9 +68,10 @@ const Editor = struct {
         return editor;
     }
 
-    fn open(self: *Self) !void {
-        const line = "Hello, world!";
-        self.row = try self.allocator.dupe(u8, line);
+    fn open(self: *Self, filename: []u8) !void {
+        const file = try std.fs.cwd().openFile(filename, .{});
+        defer file.close();
+        self.row = try file.reader().readUntilDelimiterAlloc(self.allocator, '\n', 1 * 1024 * 1024);
         self.row_count = 1;
     }
 
@@ -189,7 +192,9 @@ const Editor = struct {
                     try writer.writeAll("~");
                 }
             } else {
-                try writer.writeAll(self.row);
+                var len = self.row.len;
+                if (len > self.cols) len = self.cols;
+                try writer.writeAll(self.row[0..len]);
             }
             try writer.writeAll("\x1b[K");
             if (y < self.rows - 1) try writer.writeAll("\r\n");
