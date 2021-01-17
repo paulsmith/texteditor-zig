@@ -173,19 +173,23 @@ const Editor = struct {
     fn drawRows(self: *Self, writer: anytype) !void {
         var y: usize = 0;
         while (y < self.rows) : (y += 1) {
-            if (y == self.rows / 3) {
-                var welcome = try fmt.allocPrint(self.allocator, "Kilo self -- version {s}", .{kilo_version});
-                defer self.allocator.free(welcome);
-                if (welcome.len > self.cols) welcome = welcome[0..self.cols];
-                var padding = (self.cols - welcome.len) / 2;
-                if (padding > 0) {
+            if (y >= self.row_count) {
+                if (y == self.rows / 3) {
+                    var welcome = try fmt.allocPrint(self.allocator, "Kilo self -- version {s}", .{kilo_version});
+                    defer self.allocator.free(welcome);
+                    if (welcome.len > self.cols) welcome = welcome[0..self.cols];
+                    var padding = (self.cols - welcome.len) / 2;
+                    if (padding > 0) {
+                        try writer.writeAll("~");
+                        padding -= 1;
+                    }
+                    while (padding > 0) : (padding -= 1) try writer.writeAll(" ");
+                    try writer.writeAll(welcome);
+                } else {
                     try writer.writeAll("~");
-                    padding -= 1;
                 }
-                while (padding > 0) : (padding -= 1) try writer.writeAll(" ");
-                try writer.writeAll(welcome);
             } else {
-                try writer.writeAll("~");
+                try writer.writeAll(self.row);
             }
             try writer.writeAll("\x1b[K");
             if (y < self.rows - 1) try writer.writeAll("\r\n");
