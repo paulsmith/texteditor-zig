@@ -94,6 +94,8 @@ const Editor = struct {
                 var n = self.rows;
                 while (n > 0) : (n -= 1) self.moveCursor(if (movement == .page_up) .arrow_up else .arrow_down);
             },
+            .home_key => self.cx = 0,
+            .end_key => self.cx = @intCast(i16, self.cols) - 1,
         }
     }
 
@@ -119,6 +121,16 @@ const Editor = struct {
                     'B' => return Key{ .movement = .arrow_down },
                     'C' => return Key{ .movement = .arrow_right },
                     'D' => return Key{ .movement = .arrow_left },
+                    'F' => return Key{ .movement = .end_key },
+                    'H' => return Key{ .movement = .home_key },
+                    '1' => {
+                        const c3 = readByte() catch return Key{ .char = '\x1b' };
+                        if (c3 == '~') return Key{ .movement = .home_key };
+                    },
+                    '4' => {
+                        const c3 = readByte() catch return Key{ .char = '\x1b' };
+                        if (c3 == '~') return Key{ .movement = .end_key };
+                    },
                     '5' => {
                         const c3 = readByte() catch return Key{ .char = '\x1b' };
                         if (c3 == '~') return Key{ .movement = .page_up };
@@ -127,6 +139,13 @@ const Editor = struct {
                         const c3 = readByte() catch return Key{ .char = '\x1b' };
                         if (c3 == '~') return Key{ .movement = .page_down };
                     },
+                    else => {},
+                }
+            } else if (c1 == 'O') {
+                const c2 = readByte() catch return Key{ .char = '\x1b' };
+                switch (c2) {
+                    'F' => return Key{ .movement = .end_key },
+                    'H' => return Key{ .movement = .home_key },
                     else => {},
                 }
             }
@@ -189,6 +208,8 @@ const Movement = enum {
     arrow_down,
     page_up,
     page_down,
+    home_key,
+    end_key,
 };
 
 const Key = union(enum) {
