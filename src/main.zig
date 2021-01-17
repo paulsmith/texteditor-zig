@@ -107,6 +107,7 @@ const Editor = struct {
                 else => {},
             },
             .movement => |m| self.moveCursor(m),
+            .delete => {},
         }
     }
 
@@ -126,6 +127,10 @@ const Editor = struct {
                     '1' => {
                         const c3 = readByte() catch return Key{ .char = '\x1b' };
                         if (c3 == '~') return Key{ .movement = .home_key };
+                    },
+                    '3' => {
+                        const c3 = readByte() catch return Key{ .char = '\x1b' };
+                        if (c3 == '~') return Key.delete;
                     },
                     '4' => {
                         const c3 = readByte() catch return Key{ .char = '\x1b' };
@@ -215,6 +220,7 @@ const Movement = enum {
 const Key = union(enum) {
     char: u8,
     movement: Movement,
+    delete: void,
 };
 
 const WindowSize = struct {
