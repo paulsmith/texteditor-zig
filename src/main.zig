@@ -15,6 +15,7 @@ pub fn main() anyerror!void {
     }
     var editor = try Editor.new(&gpa.allocator);
     defer gpa.allocator.destroy(editor);
+    try editor.open();
     try editor.enableRawMode();
     defer editor.disableRawMode();
     while (true) {
@@ -22,6 +23,7 @@ pub fn main() anyerror!void {
         try editor.processKeyPress();
         if (editor.shutting_down) break;
     }
+    editor.allocator.free(editor.row);
     try stdout.writeAll("\x1b[2J");
     try stdout.writeAll("\x1b[H");
 }
@@ -40,6 +42,8 @@ const Editor = struct {
     cols: u16,
     cx: i16,
     cy: i16,
+    row_count: usize,
+    row: []u8,
     shutting_down: bool,
     allocator: *mem.Allocator,
 
@@ -54,10 +58,18 @@ const Editor = struct {
             .cols = ws.cols,
             .cx = 0,
             .cy = 0,
+            .row_count = 0,
+            .row = undefined,
             .shutting_down = false,
             .allocator = allocator,
         };
         return editor;
+    }
+
+    fn open(self: *Self) !void {
+        const line = "Hello, world!";
+        self.row = try self.allocator.dupe(u8, line);
+        self.row_count = 1;
     }
 
     fn enableRawMode(self: *Self) !void {
