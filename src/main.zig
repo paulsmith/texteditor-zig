@@ -25,7 +25,7 @@ pub fn main() anyerror!void {
         try editor.processKeyPress();
         if (editor.shutting_down) break;
     }
-    editor.allocator.free(editor.row);
+    editor.free();
     try stdout.writeAll("\x1b[2J");
     try stdout.writeAll("\x1b[H");
 }
@@ -66,6 +66,10 @@ const Editor = struct {
             .allocator = allocator,
         };
         return editor;
+    }
+
+    fn free(self: *Self) void {
+        if (self.row_count != 0) self.allocator.free(self.row);
     }
 
     fn open(self: *Self, filename: []u8) !void {
@@ -177,7 +181,7 @@ const Editor = struct {
         var y: usize = 0;
         while (y < self.rows) : (y += 1) {
             if (y >= self.row_count) {
-                if (y == self.rows / 3) {
+                if (self.row_count == 0 and y == self.rows / 3) {
                     var welcome = try fmt.allocPrint(self.allocator, "Kilo self -- version {s}", .{kilo_version});
                     defer self.allocator.free(welcome);
                     if (welcome.len > self.cols) welcome = welcome[0..self.cols];
