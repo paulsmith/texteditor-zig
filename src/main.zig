@@ -135,47 +135,62 @@ const Editor = struct {
 
     fn readKey(self: *Self) !Key {
         const c = try readByte();
-        if (c == '\x1b') {
-            const c1 = readByte() catch return Key{ .char = '\x1b' };
-            if (c1 == '[') {
-                const c2 = readByte() catch return Key{ .char = '\x1b' };
-                switch (c2) {
-                    'A' => return Key{ .movement = .arrow_up },
-                    'B' => return Key{ .movement = .arrow_down },
-                    'C' => return Key{ .movement = .arrow_right },
-                    'D' => return Key{ .movement = .arrow_left },
-                    'F' => return Key{ .movement = .end_key },
-                    'H' => return Key{ .movement = .home_key },
-                    '1' => {
-                        const c3 = readByte() catch return Key{ .char = '\x1b' };
-                        if (c3 == '~') return Key{ .movement = .home_key };
-                    },
-                    '3' => {
-                        const c3 = readByte() catch return Key{ .char = '\x1b' };
-                        if (c3 == '~') return Key.delete;
-                    },
-                    '4' => {
-                        const c3 = readByte() catch return Key{ .char = '\x1b' };
-                        if (c3 == '~') return Key{ .movement = .end_key };
-                    },
-                    '5' => {
-                        const c3 = readByte() catch return Key{ .char = '\x1b' };
-                        if (c3 == '~') return Key{ .movement = .page_up };
-                    },
-                    '6' => {
-                        const c3 = readByte() catch return Key{ .char = '\x1b' };
-                        if (c3 == '~') return Key{ .movement = .page_down };
-                    },
-                    else => {},
+        switch (c) {
+            '\x1b' => {
+                const c1 = readByte() catch return Key{ .char = '\x1b' };
+                if (c1 == '[') {
+                    const c2 = readByte() catch return Key{ .char = '\x1b' };
+                    switch (c2) {
+                        'A' => return Key{ .movement = .arrow_up },
+                        'B' => return Key{ .movement = .arrow_down },
+                        'C' => return Key{ .movement = .arrow_right },
+                        'D' => return Key{ .movement = .arrow_left },
+                        'F' => return Key{ .movement = .end_key },
+                        'H' => return Key{ .movement = .home_key },
+                        '1' => {
+                            const c3 = readByte() catch return Key{ .char = '\x1b' };
+                            if (c3 == '~') return Key{ .movement = .home_key };
+                        },
+                        '3' => {
+                            const c3 = readByte() catch return Key{ .char = '\x1b' };
+                            if (c3 == '~') return Key.delete;
+                        },
+                        '4' => {
+                            const c3 = readByte() catch return Key{ .char = '\x1b' };
+                            if (c3 == '~') return Key{ .movement = .end_key };
+                        },
+                        '5' => {
+                            const c3 = readByte() catch return Key{ .char = '\x1b' };
+                            if (c3 == '~') return Key{ .movement = .page_up };
+                        },
+                        '6' => {
+                            const c3 = readByte() catch return Key{ .char = '\x1b' };
+                            if (c3 == '~') return Key{ .movement = .page_down };
+                        },
+                        else => {},
+                    }
+                } else if (c1 == 'O') {
+                    const c2 = readByte() catch return Key{ .char = '\x1b' };
+                    switch (c2) {
+                        'F' => return Key{ .movement = .end_key },
+                        'H' => return Key{ .movement = .home_key },
+                        else => {},
+                    }
                 }
-            } else if (c1 == 'O') {
-                const c2 = readByte() catch return Key{ .char = '\x1b' };
-                switch (c2) {
-                    'F' => return Key{ .movement = .end_key },
-                    'H' => return Key{ .movement = .home_key },
-                    else => {},
-                }
-            }
+            },
+            ctrlKey('n') => return Key{
+                .movement = .arrow_down,
+            },
+            ctrlKey('p') => return Key{
+                .movement = .arrow_up,
+            },
+            ctrlKey('f') => return Key{
+                .movement = .arrow_right,
+            },
+            ctrlKey('b') => return Key{
+                .movement = .arrow_left,
+            },
+            else => {},
         }
         return Key{ .char = c };
     }
