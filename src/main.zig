@@ -244,7 +244,7 @@ const Editor = struct {
         try writer.writeAll("\x1b[?25l");
         try writer.writeAll("\x1b[H");
         try self.drawRows(writer);
-        try writer.print("\x1b[{d};{d}H", .{ self.cy + 1, self.cx + 1 });
+        try writer.print("\x1b[{d};{d}H", .{ (self.cy - @intCast(i16, self.row_offset)) + 1, self.cx + 1 });
         try writer.writeAll("\x1b[?25h");
         try stdout.writeAll(buf.items);
     }
