@@ -200,7 +200,8 @@ const Editor = struct {
     fn drawRows(self: *Self, writer: anytype) !void {
         var y: usize = 0;
         while (y < self.screen_rows) : (y += 1) {
-            if (y >= self.rows.items.len) {
+            const file_row = y + self.row_offset;
+            if (file_row >= self.rows.items.len) {
                 if (self.rows.items.len == 0 and y == self.screen_rows / 3) {
                     var welcome = try fmt.allocPrint(self.allocator, "Kilo self -- version {s}", .{kilo_version});
                     defer self.allocator.free(welcome);
@@ -216,7 +217,7 @@ const Editor = struct {
                     try writer.writeAll("~");
                 }
             } else {
-                const row = self.rows.items[y];
+                const row = self.rows.items[file_row];
                 var len = row.len;
                 if (len > self.cols) len = self.cols;
                 try writer.writeAll(row[0..len]);
@@ -226,7 +227,17 @@ const Editor = struct {
         }
     }
 
+    fn scroll(self: *Self) void {
+        if (self.cy < self.row_offset) {
+            self.row_offset = @intCast(usize, self.cy);
+        }
+        if (self.cy >= self.row_offset + self.screen_rows) {
+            self.row_offset = @intCast(usize, self.cy - @intCast(i16, self.screen_rows) + 1);
+        }
+    }
+
     fn refreshScreen(self: *Self) !void {
+        self.scroll();
         var buf = std.ArrayList(u8).init(self.allocator);
         defer buf.deinit();
         var writer = buf.writer();
