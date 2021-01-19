@@ -72,11 +72,14 @@ const Editor = struct {
         self.rows.deinit();
     }
 
+    const max_size = 1 * 1024 * 1024;
+
     fn open(self: *Self, filename: []u8) !void {
         const file = try std.fs.cwd().openFile(filename, .{});
         defer file.close();
-        const line = try file.reader().readUntilDelimiterAlloc(self.allocator, '\n', 1 * 1024 * 1024);
-        try self.rows.append(line);
+        while (try file.reader().readUntilDelimiterOrEofAlloc(self.allocator, '\n', max_size)) |line| {
+            try self.rows.append(line);
+        }
     }
 
     fn enableRawMode(self: *Self) !void {
