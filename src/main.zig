@@ -112,7 +112,7 @@ const Editor = struct {
                 if (self.cy > 0) self.cy -= 1;
             },
             .arrow_down => {
-                if (self.cy < self.screen_rows - 1) self.cy += 1;
+                if (self.cy < self.rows.items.len - 1) self.cy += 1;
             },
             .page_up, .page_down => {
                 var n = self.screen_rows;
