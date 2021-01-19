@@ -37,15 +37,15 @@ pub fn panic(msg: []const u8, error_return_trace: ?*std.builtin.StackTrace) nore
 }
 
 var gpa = heap.GeneralPurposeAllocator(.{}){};
+const StringArrayList = std.ArrayList([]u8);
 
 const Editor = struct {
     orig_termios: termios,
-    rows: u16,
+    screen_rows: u16,
     cols: u16,
     cx: i16,
     cy: i16,
-    row_count: usize,
-    row: []u8,
+    rows: StringArrayList,
     shutting_down: bool,
     allocator: *mem.Allocator,
 
@@ -56,12 +56,11 @@ const Editor = struct {
         var editor = try allocator.create(Self);
         editor.* = .{
             .orig_termios = undefined,
-            .rows = ws.rows,
+            .screen_rows = ws.rows,
             .cols = ws.cols,
             .cx = 0,
             .cy = 0,
-            .row_count = 0,
-            .row = undefined,
+            .rows = StringArrayList.init(allocator),
             .shutting_down = false,
             .allocator = allocator,
         };
@@ -69,14 +68,15 @@ const Editor = struct {
     }
 
     fn free(self: *Self) void {
-        if (self.row_count != 0) self.allocator.free(self.row);
+        for (self.rows.items) |row| self.allocator.free(row);
+        self.rows.deinit();
     }
 
     fn open(self: *Self, filename: []u8) !void {
         const file = try std.fs.cwd().openFile(filename, .{});
         defer file.close();
-        self.row = try file.reader().readUntilDelimiterAlloc(self.allocator, '\n', 1 * 1024 * 1024);
-        self.row_count = 1;
+        const line = try file.reader().readUntilDelimiterAlloc(self.allocator, '\n', 1 * 1024 * 1024);
+        try self.rows.append(line);
     }
 
     fn enableRawMode(self: *Self) !void {
@@ -107,10 +107,10 @@ const Editor = struct {
                 if (self.cy > 0) self.cy -= 1;
             },
             .arrow_down => {
-                if (self.cy < self.rows - 1) self.cy += 1;
+                if (self.cy < self.screen_rows - 1) self.cy += 1;
             },
             .page_up, .page_down => {
-                var n = self.rows;
+                var n = self.screen_rows;
                 while (n > 0) : (n -= 1) self.moveCursor(if (movement == .page_up) .arrow_up else .arrow_down);
             },
             .home_key => self.cx = 0,
@@ -179,9 +179,9 @@ const Editor = struct {
 
     fn drawRows(self: *Self, writer: anytype) !void {
         var y: usize = 0;
-        while (y < self.rows) : (y += 1) {
-            if (y >= self.row_count) {
-                if (self.row_count == 0 and y == self.rows / 3) {
+        while (y < self.screen_rows) : (y += 1) {
+            if (y >= self.rows.items.len) {
+                if (self.rows.items.len == 0 and y == self.screen_rows / 3) {
                     var welcome = try fmt.allocPrint(self.allocator, "Kilo self -- version {s}", .{kilo_version});
                     defer self.allocator.free(welcome);
                     if (welcome.len > self.cols) welcome = welcome[0..self.cols];
@@ -196,12 +196,13 @@ const Editor = struct {
                     try writer.writeAll("~");
                 }
             } else {
-                var len = self.row.len;
+                const row = self.rows.items[y];
+                var len = row.len;
                 if (len > self.cols) len = self.cols;
-                try writer.writeAll(self.row[0..len]);
+                try writer.writeAll(row[0..len]);
             }
             try writer.writeAll("\x1b[K");
-            if (y < self.rows - 1) try writer.writeAll("\r\n");
+            if (y < self.screen_rows - 1) try writer.writeAll("\r\n");
         }
     }
 
